@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAI CadX - Patient Image Diagnostic & Machine Learning Web Suite</title>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Interactive Radiomic & Evaluation Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+        <div class="nav-left">
+            <div class="logo-icon">
+                <i class="fa-solid fa-heart-pulse"></i>
+            </div>
+            <div class="brand-info">
+                <h1>MedAI <span>CadX</span></h1>
+                <p>Medical Patient Image Diagnostic & Machine Learning Platform</p>
+            </div>
+        </div>
+        <div class="nav-center">
+            <div class="nav-tabs" id="viewModeTabs">
+                <button class="tab-btn active" data-view="all"><i class="fa-solid fa-table-cells-large"></i> All-In-One Frame View</button>
+                <button class="tab-btn" data-view="step"><i class="fa-solid fa-list-ol"></i> Step-by-Step Mode</button>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="status-badge" id="systemStatus">
+                <span class="pulse-dot"></span>
+                <span id="statusText">System Ready (5 Models Trained)</span>
+            </div>
+            <button class="btn btn-outline" id="quickTrainBtn" title="Re-train all ML algorithms on dataset">
+                <i class="fa-solid fa-brain"></i> Retrain Models
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container Frame -->
+    <main class="dashboard-container">
+        
+        <!-- Pipeline Navigation Tracker (1 frame workflow indicator) -->
+        <nav class="pipeline-tracker" id="pipelineStepper">
+            <div class="step-item active" data-target="stage-load">
+                <div class="step-num"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                <div class="step-meta">
+                    <span class="step-tag">Step 1</span>
+                    <span class="step-name">Load Input Image</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item" data-target="stage-preprocess">
+                <div class="step-num"><i class="fa-solid fa-sliders"></i></div>
+                <div class="step-meta">
+                    <span class="step-tag">Step 2</span>
+                    <span class="step-name">Preprocessor</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item" data-target="stage-features">
+                <div class="step-num"><i class="fa-solid fa-chart-pie"></i></div>
+                <div class="step-meta">
+                    <span class="step-tag">Step 3</span>
+                    <span class="step-name">Feature Extraction</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item" data-target="stage-training">
+                <div class="step-num"><i class="fa-solid fa-network-wired"></i></div>
+                <div class="step-meta">
+                    <span class="step-tag">Step 4</span>
+                    <span class="step-name">Training & Evaluation</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item" data-target="stage-diagnosis">
+                <div class="step-num"><i class="fa-solid fa-stethoscope"></i></div>
+                <div class="step-meta">
+                    <span class="step-tag">Step 5</span>
+                    <span class="step-name">Patient Diagnosis</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Notification Toast -->
+        <div id="toastNotification" class="toast hidden">
+            <i class="fa-solid fa-circle-info"></i>
+            <span id="toastMessage">Pipeline executed successfully.</span>
+        </div>
+
+        <!-- ================= STAGE 1: LOAD INPUT IMAGE & PATIENT INFO ================= -->
+        <section class="pipeline-section" id="stage-load">
+            <div class="section-header">
+                <div class="badge-label">STAGE 01</div>
+                <h2><i class="fa-solid fa-id-card-clip"></i> Load Input Image & Patient Demographics</h2>
+                <p>Upload a clinical patient scan (MRI / X-Ray / CT) or select an authentic benchmark sample case.</p>
+            </div>
+
+            <div class="grid-2-col">
+                <!-- Left: Patient Demographics Form & Upload -->
+                <div class="card form-card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-hospital-user"></i> Patient Demographics</h3>
+                        <span class="sub-text">Enter clinical metadata</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Patient ID</label>
+                            <input type="text" id="patientId" value="PT-2026-9021" placeholder="e.g. PT-9021">
+                        </div>
+                        <div class="form-group">
+                            <label>Patient Full Name</label>
+                            <input type="text" id="patientName" value="Emily Davis" placeholder="Full name">
+                        </div>
+                        <div class="form-group">
+                            <label>Age (Years)</label>
+                            <input type="number" id="patientAge" value="34" min="1" max="120">
+                        </div>
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select id="patientGender">
+                                <option value="Female" selected>Female</option>
+                                <option value="Male">Male</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Modality / Examination</label>
+                            <select id="patientModality">
+                                <option value="Brain MRI (Axial T1/T2)" selected>Brain MRI (Axial T1/T2)</option>
+                                <option value="Chest Radiograph (PA View)">Chest Radiograph (PA View)</option>
+                                <option value="Computed Tomography (CT)">Computed Tomography (CT)</option>
+                                <option value="Histopathological Slide">Histopathological Slide</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="upload-area" id="dropZone">
+                        <input type="file" id="imageFileInput" accept="image/*" hidden>
+                        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                        <h4>Drag & Drop Patient Scan Image Here</h4>
+                        <p>Supports PNG, JPG, JPEG, DICOM-converted scans (Max: 16MB)</p>
+                        <button type="button" class="btn btn-primary btn-sm" id="browseFilesBtn">
+                            <i class="fa-solid fa-folder-open"></i> Browse File
+                        </button>
+                    </div>
+
+                    <!-- Preset Sample Cases -->
+                    <div class="samples-selector">
+                        <span class="selector-label"><i class="fa-solid fa-bolt"></i> Or Choose Benchmark Clinical Samples:</span>
+                        <div class="samples-pills">
+                            <button class="sample-pill" data-sample="brain_normal">
+                                <i class="fa-solid fa-circle-check text-success"></i> Brain MRI: Normal
+                            </button>
+                            <button class="sample-pill active-sample" data-sample="brain_tumor">
+                                <i class="fa-solid fa-triangle-exclamation text-danger"></i> Brain MRI: Tumor Lesion
+                            </button>
+                            <button class="sample-pill" data-sample="chest_normal">
+                                <i class="fa-solid fa-circle-check text-success"></i> Chest X-Ray: Healthy
+                            </button>
+                            <button class="sample-pill" data-sample="chest_pneumonia">
+                                <i class="fa-solid fa-triangle-exclamation text-danger"></i> Chest X-Ray: Pneumonia
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Loaded Scan Preview & Metadata -->
+                <div class="card preview-card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-microscope"></i> Loaded Patient Input Scan</h3>
+                        <span class="badge" id="scanStatusBadge">Image Loaded</span>
+                    </div>
+
+                    <div class="image-viewport">
+                        <img id="loadedImagePreview" src="/static/placeholder.png" alt="Patient Medical Scan">
+                        <div class="viewport-overlay" id="loadingOverlay" style="display: none;">
+                            <div class="spinner"></div>
+                            <span>Executing Pipeline Engine...</span>
+                        </div>
+                    </div>
+
+                    <!-- Image Metadata Specs -->
+                    <div class="stats-row" id="imageStatsRow">
+                        <div class="stat-box">
+                            <span class="stat-lbl">Dimensions</span>
+                            <span class="stat-val" id="statDim">256 x 256 px</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-lbl">Channels</span>
+                            <span class="stat-val" id="statChannels">1 (Monochrome)</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-lbl">Mean Intensity</span>
+                            <span class="stat-val" id="statMean">--</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-lbl">Std Deviation</span>
+                            <span class="stat-val" id="statStd">--</span>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn btn-success btn-block" id="runPipelineBtn">
+                            <i class="fa-solid fa-play"></i> Execute Preprocessing & Feature Extraction
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= STAGE 2: PREPROCESSOR ================= -->
+        <section class="pipeline-section" id="stage-preprocess">
+            <div class="section-header">
+                <div class="badge-label">STAGE 02</div>
+                <h2><i class="fa-solid fa-filter"></i> Image Preprocessor Pipeline</h2>
+                <p>Standardization, Gaussian noise filtration, CLAHE contrast enhancement, and Otsu morphological tissue segmentation.</p>
+            </div>
+
+            <div class="preprocessor-gallery">
+                <!-- Step 2.1: Original Resized -->
+                <div class="gallery-card">
+                    <div class="gallery-header">
+                        <span class="gallery-step">2.1 Standardized</span>
+                        <h4>Input Standardized</h4>
+                    </div>
+                    <div class="gallery-img-box">
+                        <img id="imgPreOriginal" src="" alt="Standardized Scan">
+                    </div>
+                    <div class="gallery-desc">Normalized to fixed 256x256 resolution matrix.</div>
+                </div>
+
+                <!-- Step 2.2: Grayscale & Denoised -->
+                <div class="gallery-card">
+                    <div class="gallery-header">
+                        <span class="gallery-step">2.2 Denoised</span>
+                        <h4>Gaussian Filter</h4>
+                    </div>
+                    <div class="gallery-img-box">
+                        <img id="imgPreDenoised" src="" alt="Gaussian Denoised">
+                    </div>
+                    <div class="gallery-desc">5x5 kernel smoothing eliminates high-frequency sensor noise.</div>
+                </div>
+
+                <!-- Step 2.3: CLAHE Enhanced -->
+                <div class="gallery-card">
+                    <div class="gallery-header">
+                        <span class="gallery-step">2.3 Enhanced</span>
+                        <h4>CLAHE Contrast</h4>
+                    </div>
+                    <div class="gallery-img-box">
+                        <img id="imgPreEnhanced" src="" alt="CLAHE Enhanced">
+                    </div>
+                    <div class="gallery-desc">Adaptive histogram equalization brings out subtle tissue contrast.</div>
+                </div>
+
+                <!-- Step 2.4: Otsu Segmented Mask -->
+                <div class="gallery-card">
+                    <div class="gallery-header">
+                        <span class="gallery-step">2.4 Segmented</span>
+                        <h4>Otsu ROI Mask</h4>
+                    </div>
+                    <div class="gallery-img-box">
+                        <img id="imgPreMask" src="" alt="Otsu Mask">
+                    </div>
+                    <div class="gallery-desc">Morphological closing isolates hyperdense lesion structures.</div>
+                </div>
+
+                <!-- Step 2.5: Canny Edge Map -->
+                <div class="gallery-card">
+                    <div class="gallery-header">
+                        <span class="gallery-step">2.5 Boundaries</span>
+                        <h4>Canny Edge Map</h4>
+                    </div>
+                    <div class="gallery-img-box">
+                        <img id="imgPreEdges" src="" alt="Canny Edges">
+                    </div>
+                    <div class="gallery-desc">Dual thresholding (50/150) highlights anatomical boundaries.</div>
+                </div>
+
+                <!-- Step 2.6: ROI Diagnostic Overlay -->
+                <div class="gallery-card highlight-card">
+                    <div class="gallery-header">
+                        <span class="gallery-step">2.6 Diagnostic</span>
+                        <h4>Pathology Overlay</h4>
+                    </div>
+                    <div class="gallery-img-box">
+                        <img id="imgPreOverlay" src="" alt="Diagnostic Overlay">
+                    </div>
+                    <div class="gallery-desc">Color-mapped overlay demarcates candidate anomaly regions.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= STAGE 3: FEATURE EXTRACTION ================= -->
+        <section class="pipeline-section" id="stage-features">
+            <div class="section-header">
+                <div class="badge-label">STAGE 03</div>
+                <h2><i class="fa-solid fa-chart-column"></i> Radiomic Feature Extraction</h2>
+                <p>Extraction of 18 quantitative bio-markers: 1st order statistical moments, Haralick GLCM texture metrics, and morphological shape descriptors.</p>
+            </div>
+
+            <div class="grid-2-col">
+                <!-- Left: Interactive Feature Table -->
+                <div class="card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-list-check"></i> Extracted Feature Vector (18 Dimensions)</h3>
+                        <span class="badge badge-info">Quantized 32-Level GLCM</span>
+                    </div>
+
+                    <div class="features-scroll-table">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Feature Name</th>
+                                    <th>Extracted Value</th>
+                                    <th>Clinical Significance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="featuresTableBody">
+                                <!-- Populated dynamically by JavaScript -->
+                                <tr><td colspan="4" class="text-center">Load an image to extract radiomic features.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right: Radiomic Feature Fingerprint Chart -->
+                <div class="card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-chart-line"></i> Radiomic Feature Signature</h3>
+                        <span class="sub-text">Normalized Patient Bio-Profile</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="featuresChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= STAGE 4: MODEL TRAINING & PERFORMANCE EVALUATION ================= -->
+        <section class="pipeline-section" id="stage-training">
+            <div class="section-header">
+                <div class="badge-label">STAGE 04</div>
+                <h2><i class="fa-solid fa-network-wired"></i> Machine Learning Training & Performance Evaluation</h2>
+                <p>Train and benchmark 5 supervised ML algorithms on standardized feature vectors with cross-validation and ROC-AUC curve analysis.</p>
+            </div>
+
+            <!-- Training Control Toolbar -->
+            <div class="card control-toolbar">
+                <div class="toolbar-left">
+                    <div class="toolbar-item">
+                        <label>Dataset Size:</label>
+                        <span class="bold-val" id="lblDatasetSize">100 Patient Scans (50 Normal / 50 Pathological)</span>
+                    </div>
+                    <div class="toolbar-item">
+                        <label>Train / Test Split:</label>
+                        <select id="selTestSplit">
+                            <option value="0.20">80% Train / 20% Test</option>
+                            <option value="0.25" selected>75% Train / 25% Test</option>
+                            <option value="0.30">70% Train / 30% Test</option>
+                        </select>
+                    </div>
+                    <div class="toolbar-item">
+                        <label>Cross-Validation:</label>
+                        <span class="bold-val">5-Fold Stratified</span>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-primary" id="btnExecuteTraining">
+                        <i class="fa-solid fa-arrows-rotate"></i> Retrain & Evaluate All Models
+                    </button>
+                </div>
+            </div>
+
+            <!-- Model Evaluation Benchmark Table -->
+            <div class="card">
+                <div class="card-title">
+                    <h3><i class="fa-solid fa-trophy"></i> Multi-Algorithm Performance Benchmark</h3>
+                    <span class="badge badge-success" id="bestModelBadge">Best Model: Random Forest</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="evalTable">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Accuracy (%)</th>
+                                <th>Precision (%)</th>
+                                <th>Sensitivity / Recall (%)</th>
+                                <th>Specificity (%)</th>
+                                <th>F1-Score (%)</th>
+                                <th>ROC-AUC</th>
+                                <th>5-Fold CV</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="evalTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Evaluation Visualizers: Confusion Matrix & ROC Curves -->
+            <div class="grid-2-col">
+                <!-- Confusion Matrix Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-table-cells"></i> Diagnostic Confusion Matrix</h3>
+                        <span class="sub-text" id="cmModelTitle">Selected: Random Forest</span>
+                    </div>
+                    <div class="confusion-matrix-wrapper">
+                        <div class="cm-grid">
+                            <div class="cm-cell cm-tn">
+                                <span class="cm-lbl">True Negative (TN)</span>
+                                <span class="cm-val" id="cmTN">13</span>
+                                <span class="cm-desc">Healthy Correctly Diagnosed</span>
+                            </div>
+                            <div class="cm-cell cm-fp">
+                                <span class="cm-lbl">False Positive (FP)</span>
+                                <span class="cm-val" id="cmFP">0</span>
+                                <span class="cm-desc">Type I Error</span>
+                            </div>
+                            <div class="cm-cell cm-fn">
+                                <span class="cm-lbl">False Negative (FN)</span>
+                                <span class="cm-val" id="cmFN">0</span>
+                                <span class="cm-desc">Type II Error (Critical)</span>
+                            </div>
+                            <div class="cm-cell cm-tp">
+                                <span class="cm-lbl">True Positive (TP)</span>
+                                <span class="cm-val" id="cmTP">12</span>
+                                <span class="cm-desc">Pathology Correctly Detected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROC Curves Chart Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-bezier-curve"></i> ROC-AUC Performance Curve</h3>
+                        <span class="sub-text">Sensitivity vs False Positive Rate</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="rocChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= STAGE 5: PATIENT DIAGNOSIS & CLINICAL REPORT ================= -->
+        <section class="pipeline-section" id="stage-diagnosis">
+            <div class="section-header">
+                <div class="badge-label">STAGE 05</div>
+                <h2><i class="fa-solid fa-notes-medical"></i> Patient Diagnostic Outcome & Clinical Report</h2>
+                <p>Real-time classification of the loaded patient scan using the trained machine learning pipeline and automated clinical PDF report generation.</p>
+            </div>
+
+            <div class="grid-2-col">
+                <!-- Diagnostic Findings Card -->
+                <div class="card diagnostic-card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-wave-square"></i> Real-Time Diagnostic Decision</h3>
+                        <div class="model-picker">
+                            <label>Inference Model:</label>
+                            <select id="selInferenceModel">
+                                <option value="Random Forest">Random Forest</option>
+                                <option value="Support Vector Machine (SVM)">Support Vector Machine (SVM)</option>
+                                <option value="K-Nearest Neighbors (KNN)">K-Nearest Neighbors (KNN)</option>
+                                <option value="Logistic Regression">Logistic Regression</option>
+                                <option value="Decision Tree">Decision Tree</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Main Diagnostic Result Banner -->
+                    <div class="diagnosis-banner" id="diagnosisBanner">
+                        <div class="diag-icon-box">
+                            <i class="fa-solid fa-triangle-exclamation" id="diagIcon"></i>
+                        </div>
+                        <div class="diag-meta">
+                            <span class="diag-sub" id="diagPatientSummary">Patient: Emily Davis | PT-9021</span>
+                            <h2 class="diag-title" id="diagTitle">PATHOLOGICAL / LESION DETECTED</h2>
+                            <div class="diag-badges">
+                                <span class="pill-badge pill-danger" id="diagRiskBadge">Risk Level: High</span>
+                                <span class="pill-badge pill-info" id="diagModelBadge">Model: Random Forest</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confidence Meter -->
+                    <div class="meter-box">
+                        <div class="meter-header">
+                            <span>Diagnostic Confidence:</span>
+                            <span class="meter-percentage" id="confidenceValue">97.8%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="confidenceBar" style="width: 97.8%;"></div>
+                        </div>
+                        <div class="prob-distribution">
+                            <span>P(Normal): <b id="probNormal">2.2%</b></span>
+                            <span>P(Pathology): <b id="probPathology">97.8%</b></span>
+                        </div>
+                    </div>
+
+                    <!-- Clinical Recommendation -->
+                    <div class="recommendation-box">
+                        <h4><i class="fa-solid fa-user-doctor"></i> Clinical Guidance & Recommendation</h4>
+                        <p id="clinicalRecommendationText">Immediate radiological correlation and specialized biopsy/contrast follow-up advised.</p>
+                    </div>
+
+                    <div class="btn-group-row">
+                        <button class="btn btn-primary" id="btnRunDiagnosis">
+                            <i class="fa-solid fa-arrows-rotate"></i> Re-evaluate Diagnosis
+                        </button>
+                        <a href="/api/download-report" class="btn btn-success" id="btnDownloadReport" target="_blank">
+                            <i class="fa-solid fa-file-pdf"></i> Download Official Clinical PDF Report
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Live Patient Summary Report Preview Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <h3><i class="fa-solid fa-file-medical"></i> Clinical Report Summary</h3>
+                        <span class="badge badge-outline">Ready to Print</span>
+                    </div>
+
+                    <div class="report-preview-box">
+                        <div class="rpt-header">
+                            <div class="rpt-logo">
+                                <i class="fa-solid fa-heart-pulse"></i> MedAI CadX Medical Center
+                            </div>
+                            <div class="rpt-id" id="rptDateStamp">Date: Today</div>
+                        </div>
+                        <hr class="rpt-divider">
+                        <div class="rpt-row">
+                            <div><b>Patient:</b> <span id="rptName">Emily Davis</span></div>
+                            <div><b>ID:</b> <span id="rptId">PT-9021</span></div>
+                            <div><b>Age/Sex:</b> <span id="rptDemog">34 yrs / Female</span></div>
+                        </div>
+                        <div class="rpt-row">
+                            <div><b>Exam:</b> <span id="rptModality">Brain MRI</span></div>
+                            <div><b>Method:</b> GLCM Radiomics + Supervised ML</div>
+                        </div>
+                        <div class="rpt-findings">
+                            <h4>Automated Diagnostic Finding:</h4>
+                            <div class="rpt-finding-alert" id="rptFindingAlert">
+                                <b id="rptFindingTitle">PATHOLOGICAL FINDING DETECTED</b><br>
+                                <span id="rptFindingDetails">High statistical confidence based on hyperintense tissue texture variation, elevated GLCM contrast, and irregular boundary morphology.</span>
+                            </div>
+                        </div>
+                        <div class="rpt-signature-zone">
+                            <div class="sig-line">
+                                <div class="sig-name">Dr. E. Vance, MD</div>
+                                <div class="sig-title">Attending Radiologist & Chief Medical AI Officer</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p><b>MedAI CadX</b> &copy; 2026 - Educational & Clinical AI Diagnostic Pipeline Suite. Built with OpenCV, Scikit-Learn, Flask & ReportLab.</p>
+        </div>
+    </footer>
+
+    <!-- App JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+
